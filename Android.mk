@@ -1,8 +1,8 @@
 LOCAL_PATH := $(call my-dir)
 
-lz4_version_major := `sed -n '/define LZ4_VERSION_MAJOR/s/.*[[:blank:]]\([0-9][0-9]*\).*/\1/p' < "$(LOCAL_PATH)/lib/lz4.h"`
-lz4_version_minor := `sed -n '/define LZ4_VERSION_MINOR/s/.*[[:blank:]]\([0-9][0-9]*\).*/\1/p' < "$(LOCAL_PATH)/lib/lz4.h"`
-lz4_version_patch := `sed -n '/define LZ4_VERSION_RELEASE/s/.*[[:blank:]]\([0-9][0-9]*\).*/\1/p' < "$(LOCAL_PATH)/lib/lz4.h"`
+lz4_version_major := `awk '$1=="#define" && $2=="LZ4_VERSION_MAJOR"   {print $3; exit}' "$(LOCAL_PATH)/lib/lz4.h"`
+lz4_version_minor := `awk '$1=="#define" && $2=="LZ4_VERSION_MINOR"   {print $3; exit}' "$(LOCAL_PATH)/lib/lz4.h"`
+lz4_version_patch := `awk '$1=="#define" && $2=="LZ4_VERSION_RELEASE" {print $3; exit}' "$(LOCAL_PATH)/lib/lz4.h"`
 lz4_version := $(shell echo $(lz4_version_major).$(lz4_version_minor).$(lz4_version_patch))
 
 common_c_includes := $(LOCAL_PATH)/lib
@@ -24,8 +24,7 @@ lib_src_files := \
 
 programs_c_includes := $(LOCAL_PATH)/programs
 
-programs_cflags := \
-	-Wswitch-enum -falign-loops=32
+programs_cflags :=
 
 programs_src_files := \
 	programs/lz4cli.c \
@@ -64,4 +63,14 @@ else
 	LOCAL_SHARED_LIBRARIES := liblz4
 endif
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := lz4_host
+LOCAL_MODULE_STEM := lz4
+LOCAL_C_INCLUDES := $(programs_c_includes) $(lib_c_includes) $(common_c_includes)
+LOCAL_CFLAGS := $(common_cflags) $(programs_cflags)
+LOCAL_LDFLAGS := -lrt
+LOCAL_SRC_FILES := $(programs_src_files) $(lib_src_files)
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_HOST_EXECUTABLE)
 
