@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # You can contact the author at :
-#  - LZ4 source repository : http://code.google.com/p/lz4/
+#  - LZ4 source repository : https://github.com/Cyan4973/lz4
 #  - LZ4 forum froup : https://groups.google.com/forum/#!forum/lz4c
 # ##########################################################################
 # This makefile compile and test
@@ -27,13 +27,14 @@
 # kindly provided by Takayuki Matsuoka
 # ##########################################################################
 
-CFLAGS ?= -O3
-CFLAGS += -std=c99 -Wall -Wextra -Wundef -Wshadow -Wcast-align -Wstrict-prototypes
-FLAGS  := -I../lib $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)
+CPPFLAGS += -I../lib
+CFLAGS   ?= -O3
+CFLAGS   += -std=gnu99 -Wall -Wextra -Wundef -Wshadow -Wcast-align -Wstrict-prototypes
+FLAGS    := $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $(MOREFLAGS)
 
-TESTFILE= Makefile
-LZ4DIR := ../lib
-LZ4 = ../programs/lz4
+TESTFILE  = Makefile
+LZ4DIR   := ../lib
+LZ4       = ../programs/lz4
 
 
 # Define *.exe as extension for Windows systems
@@ -48,12 +49,16 @@ endif
 
 default: all
 
-all: printVersion doubleBuffer ringBuffer ringBufferHC lineCompress frameCompress
+all: printVersion doubleBuffer dictionaryRandomAccess ringBuffer ringBufferHC \
+     lineCompress frameCompress simpleBuffer
 
 printVersion: $(LZ4DIR)/lz4.c printVersion.c
 	$(CC)      $(FLAGS) $^ -o $@$(EXT)
 
 doubleBuffer: $(LZ4DIR)/lz4.c blockStreaming_doubleBuffer.c
+	$(CC)      $(FLAGS) $^ -o $@$(EXT)
+
+dictionaryRandomAccess: $(LZ4DIR)/lz4.c dictionaryRandomAccess.c
 	$(CC)      $(FLAGS) $^ -o $@$(EXT)
 
 ringBuffer  : $(LZ4DIR)/lz4.c blockStreaming_ringBuffer.c
@@ -66,20 +71,36 @@ lineCompress: $(LZ4DIR)/lz4.c blockStreaming_lineByLine.c
 	$(CC)      $(FLAGS) $^ -o $@$(EXT)
 
 frameCompress: frameCompress.c
-	$(CC)      $(FLAGS) $^ -o $@$(EXT) -L$(LZ4DIR) -llz4
+	$(CC)      $(FLAGS) $^ -o $@$(EXT) $(LZ4DIR)/liblz4.a
+
+compressFunctions: $(LZ4DIR)/lz4.c compress_functions.c
+	$(CC)      $(FLAGS) $^ -o $@$(EXT) -lrt
+
+simpleBuffer: $(LZ4DIR)/lz4.c simple_buffer.c
+	$(CC)      $(FLAGS) $^ -o $@$(EXT)
 
 test : all
+	@echo "\n=== Print Version ==="
 	./printVersion$(EXT)
+	@echo "\n=== Simple compression example ==="
+	./simpleBuffer$(EXT)
+	@echo "\n=== Double-buffer ==="
 	./doubleBuffer$(EXT) $(TESTFILE)
+	@echo "\n=== Ring Buffer ==="
 	./ringBuffer$(EXT)   $(TESTFILE)
+	@echo "\n=== Ring Buffer + LZ4 HC ==="
 	./ringBufferHC$(EXT) $(TESTFILE)
+	@echo "\n=== Compress line by line ==="
 	./lineCompress$(EXT) $(TESTFILE)
-	LD_LIBRARY_PATH=$(LZ4DIR) ./frameCompress$(EXT) $(TESTFILE)
+	@echo "\n=== Dictionary Random Access ==="
+	./dictionaryRandomAccess$(EXT) $(TESTFILE) $(TESTFILE) 1100 1400
+	@echo "\n=== Frame compression ==="
+	./frameCompress$(EXT) $(TESTFILE)
 	$(LZ4) -vt $(TESTFILE).lz4
 
 clean:
 	@rm -f core *.o *.dec *-0 *-9 *-8192 *.lz4s *.lz4 \
-	 printVersion$(EXT) doubleBuffer$(EXT) ringBuffer$(EXT) ringBufferHC$(EXT) \
-	 lineCompress$(EXT) frameCompress$(EXT)
+	 printVersion$(EXT) doubleBuffer$(EXT) dictionaryRandomAccess$(EXT) \
+	 ringBuffer$(EXT) ringBufferHC$(EXT) lineCompress$(EXT) frameCompress$(EXT) \
+	 compressFunctions$(EXT) simpleBuffer$(EXT)
 	@echo Cleaning completed
-
